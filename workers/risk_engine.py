@@ -24,20 +24,16 @@ RISK_CONFIG: dict[str, float] = {
     "video_weight": float(os.getenv("RISK_VIDEO_WEIGHT", "0.4")),
     "audio_weight": float(os.getenv("RISK_AUDIO_WEIGHT", "0.3")),
     "evaluation_weight": float(os.getenv("RISK_EVALUATION_WEIGHT", "0.3")),
-
     "low_risk_threshold": float(os.getenv("RISK_LOW_RISK_THRESHOLD", "0.3")),
     "medium_risk_threshold": float(os.getenv("RISK_MEDIUM_RISK_THRESHOLD", "0.6")),
     "high_risk_threshold": float(os.getenv("RISK_HIGH_RISK_THRESHOLD", "0.8")),
-
     "video_multiple_persons": float(os.getenv("RISK_VIDEO_MULTIPLE_PERSONS", "0.35")),
     "video_phone_detected": float(os.getenv("RISK_VIDEO_PHONE_DETECTED", "0.25")),
     "video_suspicious_head_movement": float(os.getenv("RISK_VIDEO_SUSPICIOUS_HEAD", "0.20")),
     "video_no_face_detected": float(os.getenv("RISK_VIDEO_NO_FACE", "0.45")),
-
     "audio_background_voices": float(os.getenv("RISK_AUDIO_BACKGROUND_VOICES", "0.35")),
     "audio_suspicious_pattern": float(os.getenv("RISK_AUDIO_SUSPICIOUS_PATTERN", "0.25")),
     "audio_no_transcription": float(os.getenv("RISK_AUDIO_NO_TRANSCRIPTION", "0.40")),
-
     "eval_low_quality": float(os.getenv("RISK_EVAL_LOW_QUALITY", "0.30")),
     "eval_low_accuracy": float(os.getenv("RISK_EVAL_LOW_ACCURACY", "0.40")),
     "eval_poor_communication": float(os.getenv("RISK_EVAL_POOR_COMMUNICATION", "0.20")),
@@ -45,7 +41,6 @@ RISK_CONFIG: dict[str, float] = {
 
 
 class RiskScoringEngine:
-
     VIDEO_WEIGHT = RISK_CONFIG["video_weight"]
     AUDIO_WEIGHT = RISK_CONFIG["audio_weight"]
     EVALUATION_WEIGHT = RISK_CONFIG["evaluation_weight"]
@@ -153,19 +148,13 @@ class RiskScoringEngine:
         audio_risk = RiskScoringEngine.calculate_audio_risk(audio_result)
         evaluation_risk = RiskScoringEngine.calculate_evaluation_risk(evaluation_result)
 
-        final_risk = RiskScoringEngine.calculate_final_risk(
-            video_risk, audio_risk, evaluation_risk
-        )
+        final_risk = RiskScoringEngine.calculate_final_risk(video_risk, audio_risk, evaluation_risk)
 
-        decision_tree_result = RiskDecisionTree.classify(
-            video_result, audio_result, evaluation_result
-        )
+        decision_tree_result = RiskDecisionTree.classify(video_result, audio_result, evaluation_result)
 
         logger.info(f"Weighted={final_risk}, DecisionTree={decision_tree_result}")
 
-        risk_factors = RiskScoringEngine._identify_risk_factors(
-            video_result, audio_result, evaluation_result
-        )
+        risk_factors = RiskScoringEngine._identify_risk_factors(video_result, audio_result, evaluation_result)
 
         return {
             "session_id": session_id,
@@ -215,8 +204,8 @@ class RiskScoringEngine:
 
 # ---------------- DECISION TREE ---------------- #
 
-class RiskDecisionTree:
 
+class RiskDecisionTree:
     @staticmethod
     def classify(video, audio, evaluation):
 
