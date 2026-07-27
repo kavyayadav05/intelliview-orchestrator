@@ -1,32 +1,22 @@
 """
 Answer Evaluation Pipeline
-Handles interview answer evaluation and scoring
-
-Responsibilities:
-- LLM-based answer evaluation
-- Score generation
-- Feedback generation
-
-Pluggable contract — replace each evaluator with your own LLM client
-(OpenAI, Anthropic, local Llama, etc.). The provided defaults produce
-deterministic per-session signals so the risk engine's HIGH/CRITICAL
-thresholds exercise without external services.
 """
 
 import json
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from workers._stubs import _seeded_unit
 
-from workers._stubs import _seeded_unit  # noqa: E402
+# ---------------- Question Validation ---------------- #
 
-# ---------------------------------------------------------------------------
-# Real LLM-based evaluation helpers with fallback to seeded stubs
-# ---------------------------------------------------------------------------
+_BANNED_TOPIC_PATTERNS = None
 
 
+<<<<<<< HEAD
 def _llm_evaluate_answer_quality(session_id: str, question: str, answer: str) -> dict[str, Any] | None:
     """Use GPT-4o/Gemini/Grok to evaluate answer quality and relevance."""
     prompt = (
@@ -111,10 +101,30 @@ def _llm_evaluate_technical_accuracy(session_id: str, question: str, answer: str
         "knowledge_gaps (list of strings)."
     )
     user_msg = f"Question: {question}\n\nAnswer: {answer}"
+=======
+def _get_banned_patterns():
+    global _BANNED_TOPIC_PATTERNS
+    if _BANNED_TOPIC_PATTERNS is None:
+        BANNED_TOPICS = [
+            "age", "pregnant", "religion", "married",
+            "disability", "health condition"
+        ]
+        _BANNED_TOPIC_PATTERNS = [
+            re.compile(r"\b" + kw + r"\b", re.IGNORECASE)
+            for kw in BANNED_TOPICS
+        ]
+    return _BANNED_TOPIC_PATTERNS
 
-    try:
-        from workers.ai_client import HAS_OPENAI, chat_completion
 
+def validate_generated_question(question: str):
+    reasons = []
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
+
+    for pattern in _get_banned_patterns():
+        if pattern.search(question):
+            reasons.append("banned topic")
+
+<<<<<<< HEAD
         if HAS_OPENAI:
             response = chat_completion(
                 [{"role": "system", "content": prompt}, {"role": "user", "content": user_msg}],
@@ -133,10 +143,15 @@ def _llm_evaluate_technical_accuracy(session_id: str, question: str, answer: str
                 }
     except Exception as exc:
         logger.debug("OpenAI accuracy evaluation failed: %s", exc)
+=======
+    if len(question) < 20:
+        reasons.append("too short")
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
 
-    try:
-        from workers.ai_client import HAS_GEMINI, gemini_generate
+    if not question.endswith("?"):
+        reasons.append("not a question")
 
+<<<<<<< HEAD
         if HAS_GEMINI:
             response = gemini_generate(f"{prompt}\n\n{user_msg}", temperature=0.3, max_output_tokens=512)
             if response:
@@ -177,11 +192,20 @@ def _llm_evaluate_technical_accuracy(session_id: str, question: str, answer: str
 
 def _llm_evaluate_communication(session_id: str, question: str, answer: str) -> dict[str, Any] | None:
     """Use GPT-4o to evaluate communication clarity."""
+=======
+    return len(reasons) == 0, reasons
+
+
+# ---------------- LLM Question Generator ---------------- #
+
+def _llm_generate_question(session_id: str, topic: str = "systems_design"):
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
     try:
         from workers.ai_client import chat_completion
 
         response = chat_completion(
             [
+<<<<<<< HEAD
                 {
                     "role": "system",
                     "content": (
@@ -196,21 +220,19 @@ def _llm_evaluate_communication(session_id: str, question: str, answer: str) -> 
             model="gpt-4o-mini",
             temperature=0.3,
             max_tokens=512,
+=======
+                {"role": "system", "content": f"Generate a question about {topic}"},
+                {"role": "user", "content": "Give one question"}
+            ]
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
         )
-        if response is None:
+
+        if not response:
             return None
-        parsed = json.loads(response)
-        return {
-            "clarity_score": round(parsed.get("clarity_score", 50), 2),
-            "professionalism": round(parsed.get("professionalism", 50), 2),
-            "confidence_level": round(parsed.get("confidence_level", 0.5), 2),
-            "pace_appropriateness": round(parsed.get("pace_appropriateness", 0.5), 2),
-        }
-    except Exception as exc:
-        logger.debug("LLM communication evaluation unavailable: %s", exc)
-        return None
 
+        question = response.strip()
 
+<<<<<<< HEAD
 def _llm_generate_feedback(session_id: str, question: str, answer: str) -> dict[str, Any] | None:
     """Use GPT-4o to generate personalized interview feedback."""
     try:
@@ -272,93 +294,68 @@ def _llm_generate_question(session_id: str, topic: str = "systems_design") -> st
             max_tokens=256,
         )
         return response.strip() if response else None
+=======
+        valid, _ = validate_generated_question(question)
+        return question if valid else None
+
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
     except Exception:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Public pipeline API — real LLM evaluation with seeded stub fallback
-# ---------------------------------------------------------------------------
-
+# ---------------- MAIN PIPELINE ---------------- #
 
 def evaluate_answers(session_id: str) -> dict[str, Any]:
-    """Execute answer evaluation pipeline for an interview session."""
-    logger.info(f"Starting answer evaluation for session {session_id}")
-
     quality = evaluate_answer_quality(session_id)
     accuracy = evaluate_technical_accuracy(session_id)
     clarity = evaluate_communication(session_id)
     feedback = generate_feedback(session_id)
 
-    results = {
+    result = {
         "session_id": session_id,
         "answer_quality_score": quality,
         "technical_accuracy": accuracy,
         "communication_clarity": clarity,
         "feedback": feedback,
-        "risk_score": 0.0,
     }
 
-    results["risk_score"] = calculate_evaluation_risk_score(results)
-    logger.info(f"Answer evaluation completed for session {session_id}: {results}")
-    return results
+    result["risk_score"] = calculate_evaluation_risk_score(result)
+    return result
 
 
-def evaluate_answer_quality(session_id: str) -> dict[str, Any]:
-    """Evaluate answer quality — real LLM with seeded stub fallback."""
-    logger.info(f"Evaluating answer quality for session {session_id}")
+# ---------------- STUB FUNCTIONS ---------------- #
 
-    real = _llm_evaluate_answer_quality(
-        session_id,
-        "Describe your experience with distributed systems.",
-        "I have five years of experience building distributed systems in Python and Go.",
-    )
-    if real is not None:
-        return real
-
-    base = 0.55 + _seeded_unit(session_id, "quality") * 0.45
-    return {
-        "overall_quality_score": round(base * 100, 2),
-        "relevance": round(base * 0.95, 2),
-        "completeness": round(base * 0.9, 2),
-        "clarity": round(base * 0.92, 2),
-        "feedback": "Response is on-topic and reasonably complete.",
-    }
+def evaluate_answer_quality(session_id):
+    base = 0.6 + _seeded_unit(session_id, "quality") * 0.4
+    return {"overall_quality_score": round(base * 100, 2)}
 
 
-def evaluate_technical_accuracy(session_id: str) -> dict[str, Any]:
-    """Evaluate technical accuracy — real LLM with seeded stub fallback."""
-    logger.info(f"Evaluating technical accuracy for session {session_id}")
-
-    real = _llm_evaluate_technical_accuracy(
-        session_id,
-        "Describe your experience with distributed systems.",
-        "I have five years of experience building distributed systems in Python and Go.",
-    )
-    if real is not None:
-        return real
-
+def evaluate_technical_accuracy(session_id):
     base = 0.5 + _seeded_unit(session_id, "accuracy") * 0.5
+    return {"accuracy_score": round(base * 100, 2)}
+
+
+def evaluate_communication(session_id):
+    base = 0.6 + _seeded_unit(session_id, "comms") * 0.4
+    return {"clarity_score": round(base * 100, 2)}
+
+
+def generate_feedback(session_id):
     return {
-        "accuracy_score": round(base * 100, 2),
-        "correct_concepts_count": int(base * 8),
-        "incorrect_concepts_count": max(0, 3 - int(base * 8)),
-        "knowledge_gaps": [] if base > 0.6 else ["systems design depth"],
+        "strengths": ["clear"],
+        "improvements": ["more depth"],
+        "recommendation": "progress"
     }
 
 
-def evaluate_communication(session_id: str) -> dict[str, Any]:
-    """Evaluate communication clarity — real LLM with seeded stub fallback."""
-    logger.info(f"Evaluating communication clarity for session {session_id}")
+# ---------------- RISK SCORE ---------------- #
 
-    real = _llm_evaluate_communication(
-        session_id,
-        "Describe your experience with distributed systems.",
-        "I have five years of experience building distributed systems in Python and Go.",
-    )
-    if real is not None:
-        return real
+def calculate_evaluation_risk_score(results):
+    quality = results["answer_quality_score"]["overall_quality_score"] / 100
+    accuracy = results["technical_accuracy"]["accuracy_score"] / 100
+    clarity = results["communication_clarity"]["clarity_score"] / 100
 
+<<<<<<< HEAD
     base = 0.55 + _seeded_unit(session_id, "comms") * 0.45
     return {
         "clarity_score": round(base * 100, 2),
@@ -402,3 +399,7 @@ def calculate_evaluation_risk_score(results: dict[str, Any]) -> float:
 
     score = quality_risk + accuracy_risk + clarity_risk
     return round(min(score, 1.0), 3)
+=======
+    score = (1 - quality) + (1 - accuracy) + (1 - clarity)
+    return round(min(score / 3, 1.0), 3)
+>>>>>>> f11d151 (Fixed merge conflicts in evaluation_pipeline)
