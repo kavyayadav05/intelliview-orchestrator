@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # ---------------- MAIN PIPELINE ---------------- #
 
+
 def evaluate_answers(session_id: str) -> dict[str, Any]:
     quality = evaluate_answer_quality(session_id)
     accuracy = evaluate_technical_accuracy(session_id)
@@ -30,6 +31,7 @@ def evaluate_answers(session_id: str) -> dict[str, Any]:
 
 
 # ---------------- STUB FUNCTIONS ---------------- #
+
 
 def evaluate_answer_quality(session_id: str) -> dict[str, Any]:
     base = 0.6 + _seeded_unit(session_id, "quality") * 0.4
@@ -55,6 +57,7 @@ def generate_feedback(session_id: str) -> dict[str, Any]:
 
 
 # ---------------- RISK SCORE ---------------- #
+
 
 def calculate_evaluation_risk_score(results: dict[str, Any]) -> float:
     quality = results["answer_quality_score"]["overall_quality_score"] / 100
